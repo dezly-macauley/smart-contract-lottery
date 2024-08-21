@@ -27,6 +27,10 @@ import {
     VRFConsumerBaseV2Plus
 } from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 
+import {
+    VRFV2PlusClient
+} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+
 /**
 * @title Raffle Contract
 * @author Dezly Macauley
@@ -46,7 +50,11 @@ contract Raffle is VRFConsumerBaseV2Plus {
 //_____________________________________________________________________________
 
     // SECTION: State Variables
-    
+   
+    uint16 private constant REQUEST_CONFIRMATIONS = 3;
+
+    uint32 private constant NUM_WORDS = 1;
+
     // private: i_entranceFee can only be accessed from this contract
     // immutable: The value of i_entranceFee can't be modified after it has
     // been set by the constructor function
@@ -61,6 +69,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
     // picked
     // @dev The duration is in seconds
     uint256 private immutable i_interval;
+
+
+    bytes32 private immutable i_keyHash;
+
+    uint256 private immutable i_subscriptionId;
+
+    uint32 private immutable i_callbackGasLimit;
 
     uint256 private s_lastTimeStamp;
 
@@ -83,7 +98,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     constructor(
         uint256 _enteranceFee,
         uint256 _interval,
-        address vrfCoordinator) {
+        address _vrfCoordinator, bytes32 _gasLane, uint256 _subscriptionId, uint32 _callbackGasLimit) VRFConsumerBaseV2Plus(_vrfCoordinator)  {
         // The constructor function of the the inherited constract requires
         // a vrfCoordinator which is an address.
         // So the constructor function of my contract "Raffle", will pass 
@@ -100,6 +115,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         // Fun fact: The Unix epoch is the date when computer's 
         // started counting time. Which is 1 January, 1970, at midnight (UTC)
+
+        i_keyHash = _gasLane;
+        i_subscriptionId = _subscriptionId;
+        i_callbackGasLimit = _callbackGasLimit;
 
     }
 
@@ -132,6 +151,24 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert();
         }
 
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest (
+                {
+                keyHash: i_keyHash,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
+
+            }
+        );
+
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+
+
+
         // VRFV2PlusClient.RandomWordsRequest request =  VRFV2PlusClient.RandomWordsRequest({
         //         keyHash: s_keyHash,
         //         subId: s_subscriptionId,
@@ -146,10 +183,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     }
 
-    // function fulfillRandomWords(
-    //     uint256 requestId, uint256[] calldata randomWords) internal override {
-    //
-    // }
+   function fulfillRandomWords(
+        uint256 requestId, uint256[] calldata randomWords) internal override {
+
+    }
 
 //_____________________________________________________________________________
 

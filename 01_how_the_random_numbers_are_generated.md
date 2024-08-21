@@ -251,9 +251,123 @@ remappings = [
 
 ___
 
+### Step 3: Add the functionality of the imported contract to your contract
 
-### Step 3: Import this contract into your own smart contract
+```solidity 
 
+contract Raffle is VRFConsumerBaseV2Plus {
+
+```
+
+Now my contract `Raffle` has inherited all of the functionality of the 
+`VRFConsumerBaseV2Plus` contract.
+
+___
+
+
+### Step 4: Check if the imported smart contract has a constructor function
+
+If it does then that constructor has to be added to the constructor of your
+own smart contract.
+
+If you open the imported smart contract, you will see that it actually has
+its own constructor. 
+This constructor accepts an input called `_vrfCoordinator` which is a type
+of address. `_vrfCoordinator` is actually the address of a `vrfCoordinator`
+contract
+
+#### VRFConsumerBaseV2Plus.sol
+
+```solidity
+
+  constructor(address _vrfCoordinator) ConfirmedOwner(msg.sender) {
+    if (_vrfCoordinator == address(0)) {
+      revert ZeroAddress();
+    }
+    s_vrfCoordinator = IVRFCoordinatorV2Plus(_vrfCoordinator);
+  }
+
+```
+
+___
+
+Now this is the constructor of my smart contract:
+
+#### raffle_sol.sol
+
+```solidity
+
+    constructor(
+        uint256 _enteranceFee,
+        uint256 _interval) {
+
+        i_entranceFee = _enteranceFee;
+        i_interval = _interval;
+        
+        s_lastTimeStamp = block.timestamp;
+
+    }
+```
+___
+
+#### How to add the constructor of the inherited contract to your contract
+(address _vrfCoordinator)
+
+#### raffle_sol.sol
+
+```solidity
+
+    constructor(
+        uint256 _enteranceFee,
+        uint256 _interval,
+        address _vrfCoordinator) VRFConsumerBaseV2Plus(_vrfCoordinator) {
+
+        i_entranceFee = _enteranceFee;
+        i_interval = _interval;
+        
+        s_lastTimeStamp = block.timestamp;
+
+    }
+```
+
+___
+
+### Step 5: Add the functionality to on of your functions
+
+In this case it's the `pickWinner` function from the `Raffle` contract in 
+raffle_sol
+
+```solidity
+    function pickWinner() external {
+
+        // check to see if its time to pick a winner
+        if ((block.timestamp - s_lastTimeStamp) < i_interval) {
+            revert();
+        }
+
+    }
+```
+
+Open the SupscriptionConsumer.sol file and copy the following:
+
+```solidity
+
+        requestId = s_vrfCoordinator.requestRandomWords(
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: keyHash,
+                subId: s_subscriptionId,
+                requestConfirmations: requestConfirmations,
+                callbackGasLimit: callbackGasLimit,
+                numWords: numWords,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({
+                        nativePayment: enableNativePayment
+                    })
+                )
+            })
+        );
+
+```
 
 ___
 
